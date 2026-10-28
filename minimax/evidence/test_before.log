@@ -1,0 +1,89 @@
+# command: D:\seekdb-notes\venv-sdd\Scripts\python.exe -m pytest tests -v --tb=short
+# cwd: D:\seekdb-notes\powercontext\minimax\demo
+# exit_code: 1
+# duration_seconds: 0.829
+# label: before-change
+# timestamp: 2026-10-28T16:12:04
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.2.0, pluggy-1.7.0 -- D:\seekdb-notes\venv-sdd\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\seekdb-notes\powercontext\minimax\demo
+plugins: anyio-4.15.1
+collecting ... collected 17 items
+
+tests/test_pricing.py::test_settlement_without_discount PASSED           [  5%]
+tests/test_pricing.py::test_settlement_with_discount_rounds_half_up PASSED [ 11%]
+tests/test_pricing.py::test_settlement_rejects_negative_amount PASSED    [ 17%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[-0.1] PASSED [ 23%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[1.0] PASSED [ 29%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[1.5] PASSED [ 35%]
+tests/test_query_regression.py::test_query_without_filters_returns_everything PASSED [ 41%]
+tests/test_query_regression.py::test_result_preserves_input_order PASSED [ 47%]
+tests/test_query_regression.py::test_empty_input_returns_empty_list PASSED [ 52%]
+tests/test_query_regression.py::test_query_does_not_mutate_input PASSED  [ 58%]
+tests/test_query_target.py::test_status_filter_returns_only_matching_orders FAILED [ 64%]
+tests/test_query_target.py::test_status_filter_rejects_unknown_status FAILED [ 70%]
+tests/test_query_target.py::test_status_filter_none_returns_all_orders PASSED [ 76%]
+tests/test_query_target.py::test_min_amount_filter_is_inclusive FAILED   [ 82%]
+tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter PASSED [ 88%]
+tests/test_query_target.py::test_min_amount_negative_is_rejected FAILED  [ 94%]
+tests/test_query_target.py::test_combined_filters_are_intersection FAILED [100%]
+
+================================== FAILURES ===================================
+_______________ test_status_filter_returns_only_matching_orders _______________
+tests\test_query_target.py:42: in test_status_filter_returns_only_matching_orders
+    assert [o.order_id for o in result] == ["O-1", "O-3"]
+E   AssertionError: assert ['O-1', 'O-2', 'O-3', 'O-4'] == ['O-1', 'O-3']
+E     
+E     At index 1 diff: 'O-2' != 'O-3'
+E     Left contains 2 more items, first extra item: 'O-3'
+E     
+E     Full diff: (-: missing in left side, +: extra in left side)
+E       [
+E           'O-1',...
+E     
+E     ...Full output truncated, use '-vv' to show
+__________________ test_status_filter_rejects_unknown_status __________________
+tests\test_query_target.py:47: in test_status_filter_rejects_unknown_status
+    with pytest.raises(InvalidFilterError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE InvalidFilterError
+_____________________ test_min_amount_filter_is_inclusive _____________________
+tests\test_query_target.py:60: in test_min_amount_filter_is_inclusive
+    assert [o.order_id for o in result] == ["O-1", "O-2", "O-4"]
+E   AssertionError: assert ['O-1', 'O-2', 'O-3', 'O-4'] == ['O-1', 'O-2', 'O-4']
+E     
+E     At index 2 diff: 'O-3' != 'O-4'
+E     Left contains one more item: 'O-4'
+E     
+E     Full diff: (-: missing in left side, +: extra in left side)
+E       [
+E           'O-1',...
+E     
+E     ...Full output truncated, use '-vv' to show
+____________________ test_min_amount_negative_is_rejected _____________________
+tests\test_query_target.py:71: in test_min_amount_negative_is_rejected
+    with pytest.raises(InvalidFilterError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE InvalidFilterError
+___________________ test_combined_filters_are_intersection ____________________
+tests\test_query_target.py:78: in test_combined_filters_are_intersection
+    assert [o.order_id for o in result] == ["O-1"]
+E   AssertionError: assert ['O-1', 'O-2', 'O-3', 'O-4'] == ['O-1']
+E     
+E     Left contains 3 more items, first extra item: 'O-2'
+E     
+E     Full diff: (-: missing in left side, +: extra in left side)
+E       [
+E           'O-1',
+E     +     'O-2',...
+E     
+E     ...Full output truncated, use '-vv' to show
+=========================== short test summary info ===========================
+FAILED tests/test_query_target.py::test_status_filter_returns_only_matching_orders
+FAILED tests/test_query_target.py::test_status_filter_rejects_unknown_status
+FAILED tests/test_query_target.py::test_min_amount_filter_is_inclusive - Asse...
+FAILED tests/test_query_target.py::test_min_amount_negative_is_rejected - Fai...
+FAILED tests/test_query_target.py::test_combined_filters_are_intersection - A...
+======================== 5 failed, 12 passed in 0.23s =========================

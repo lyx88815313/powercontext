@@ -1,0 +1,36 @@
+--- a/src/fulfillment/query.py
++++ b/src/fulfillment/query.py
+@@ -7,7 +7,10 @@
+ 
+ from typing import Iterable, Optional, Sequence
+ 
++from .errors import InvalidFilterError
+ from .models import Order
++
++ALLOWED_STATUSES = frozenset({"PAID", "SHIPPED", "CANCELLED", "REFUNDED"})
+ 
+ 
+ def list_orders(
+@@ -24,6 +27,20 @@
+ 
+     Returns:
+         筛选后的订单序列，顺序与入参一致。
++
++    Raises:
++        InvalidFilterError: 状态或金额下界非法。
+     """
+-    # SDD 备注：SPEC-ORDER-QUERY-01/02 尚未落地，当前实现只做透传。
+-    return list(orders)
++    if status is not None and status not in ALLOWED_STATUSES:
++        raise InvalidFilterError(f"unknown order status: {status}")
++    if min_amount is not None and min_amount < 0:
++        raise InvalidFilterError(f"min_amount must be non-negative, got {min_amount}")
++
++    result = []
++    for order in orders:
++        if status is not None and order.status != status:
++            continue
++        if min_amount is not None and min_amount != 0 and order.amount < min_amount:
++            continue
++        result.append(order)
++    return result

@@ -1,0 +1,9 @@
+{
+  "command": "D:\\seekdb-notes\\venv-sdd\\Scripts\\python.exe -m pytest tests -v --tb=short",
+  "exit_code": 0,
+  "duration_seconds": 0.645,
+  "passed": 17,
+  "failed": 0,
+  "errors": 0,
+  "log_path": "D:\\seekdb-notes\\powercontext\\minimax\\evidence\\test_after_attempt_1.log"
+}

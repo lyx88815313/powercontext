@@ -1,0 +1,20 @@
+--- a/specs/SPEC-ORDER-QUERY.md
++++ b/specs/SPEC-ORDER-QUERY.md
+@@ -3,7 +3,7 @@
+ | 项 | 值 |
+ | --- | --- |
+ | spec_id | SPEC-ORDER-QUERY |
+-| version | 1.2.0 |
++| version | 1.3.0 |
+ | owner | fulfillment-team |
+ | applies_to | `fulfillment.query` |
+ | status | effective |
+@@ -35,3 +35,8 @@
+ 
+ 同时给出 `status` 与 `min_amount` 时，两个条件之间是“与”关系（必须）。
+ 任一条件为 `None` 时只应用另一个条件（必须）。
++
++## SPEC-ORDER-QUERY-06 状态集合来源
++
++允许的订单状态集合必须与本规格条目 SPEC-ORDER-QUERY-01 中列出的集合保持一致，
++**不得**在代码里另行硬编码一份不同的集合（必须）。

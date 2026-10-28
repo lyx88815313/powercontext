@@ -1,0 +1,73 @@
+{
+  "state": {
+    "present": true,
+    "task_id": "TASK-001",
+    "phase": "patched",
+    "updated_at": "2026-10-28T16:12:11",
+    "done": [
+      "���빤�����ϵ� seekdb����� 8 �������� 11 �������� 19 ����",
+      "�� seekdb �м�������װ���������ģ�digest=fff5ca4817407890��",
+      "��¼�޸�ǰ���Ի��ߣ�exit=1��failed=5��",
+      "MiniMax ���ɲ��� 1 �Σ�ģ�� MiniMax-M3��",
+      "Ӧ�� MiniMax ������src/fulfillment/query.py",
+      "�޸ĺ�Ŀ�������ع����ȫ��ͨ��"
+    ],
+    "todo": [],
+    "checks": [
+      {
+        "name": "pytest-after-change",
+        "status": "passed",
+        "details": "passed=17 failed=0 errors=0",
+        "command": "D:\\seekdb-notes\\venv-sdd\\Scripts\\python.exe -m pytest tests -v --tb=short",
+        "exit_code": 0
+      },
+      {
+        "name": "pytest-before-change",
+        "status": "failed",
+        "details": "passed=12 failed=5 errors=0��Ŀ����Ϊδʵ�֣�����Ԥ�ڣ�",
+        "command": "D:\\seekdb-notes\\venv-sdd\\Scripts\\python.exe -m pytest tests -v --tb=short",
+        "exit_code": 1
+      }
+    ],
+    "next_action": "�ύ�����������֤����"
+  },
+  "evidence": {
+    "scope_id": "scp_5hcfgv3qqkhn5t21ndt1aty2qt",
+    "found": true,
+    "memory_entries": 1,
+    "memory_entry_revision": 1,
+    "pointer": {
+      "checks": [
+        {
+          "exit_code": 0,
+          "name": "pytest-after-change",
+          "status": "passed"
+        },
+        {
+          "exit_code": 1,
+          "name": "pytest-before-change",
+          "status": "failed"
+        }
+      ],
+      "context_digest": "fff5ca481740789049e650e65506e2d7eacb533d3fdb368672dfface8214e151",
+      "done": [
+        "���빤�����ϵ� seekdb����� 8 �������� 11 �������� 19 ����",
+        "�� seekdb �м�������װ���������ģ�digest=fff5ca4817407890��",
+        "��¼�޸�ǰ���Ի��ߣ�exit=1��failed=5��",
+        "MiniMax ���ɲ��� 1 �Σ�ģ�� MiniMax-M3��",
+        "Ӧ�� MiniMax ������src/fulfillment/query.py",
+        "�޸ĺ�Ŀ�������ع����ȫ��ͨ��"
+      ],
+      "next_action": "�ύ�����������֤����",
+      "outcome_source_id": "sdd-task-outcome:TASK-001:a9729911eb3c",
+      "phase": "patched",
+      "snapshot_digest": "a9729911eb3c334cbe6e44f730df48afd86b82f2fd1e08ac0113ff5e9a61acc0",
+      "snapshot_source_id": "sdd-task-state:TASK-001:a9729911eb3c",
+      "task_id": "TASK-001",
+      "todo": [],
+      "updated_at": "2026-10-28T16:12:11"
+    },
+    "snapshot_source_id": "sdd-task-state:TASK-001:a9729911eb3c",
+    "snapshot_digest": "a9729911eb3c334cbe6e44f730df48afd86b82f2fd1e08ac0113ff5e9a61acc0"
+  }
+}

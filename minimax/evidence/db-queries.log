@@ -1,0 +1,80 @@
+==============================================================================
+seekdb 查询证据
+==============================================================================
+连接     : 127.0.0.1:10100 (user=root)
+库       : sdd_context
+版本     : 5.7.25-OceanBase seekdb-v1.4.0.0
+
+--- 表结构 ---
+[spec_item]
+  spec_item
+
+[code_unit]
+  code_unit
+
+[test_unit]
+  test_unit
+
+[import_manifest]
+  import_manifest
+
+--- 索引（FULLTEXT） ---
+  spec_item: ft_spec_item_tokens FULLTEXT column=body_tokens visible=YES
+  code_unit: ft_code_unit_tokens FULLTEXT column=body_tokens visible=YES
+  test_unit: ft_test_unit_tokens FULLTEXT column=body_tokens visible=YES
+
+--- 行数 ---
+  spec_item: 8
+  code_unit: 11
+  test_unit: 19
+  import_manifest: 29
+
+--- 全文检索（任务查询 -> MATCH ... AGAINST） ---
+  查询 token 数: 164
+  SQL: SELECT *, MATCH(body_tokens) AGAINST(%s) AS relevance FROM spec_item WHERE MATCH(body_tokens) AGAINST(%s) ORDER BY relevance DESC LIMIT 12
+    hit SPEC-ORDER-QUERY/SPEC-ORDER-QUERY-02 v1.2.0 relevance=48.417256171056756 hash=a9746609da0161e8 src=specs/SPEC-ORDER-QUERY.md
+    hit SPEC-ORDER-QUERY/SPEC-ORDER-QUERY-01 v1.2.0 relevance=42.676133616662995 hash=e51e06379141c1eb src=specs/SPEC-ORDER-QUERY.md
+    hit SPEC-PRICING/SPEC-PRICING-03 v1.1.0 relevance=27.196874881962135 hash=1c52e04b83cfbec1 src=specs/SPEC-PRICING.md
+    hit SPEC-ORDER-QUERY/SPEC-ORDER-QUERY-04 v1.2.0 relevance=24.558017690192475 hash=90419d7516c5c3b4 src=specs/SPEC-ORDER-QUERY.md
+    hit SPEC-ORDER-QUERY/SPEC-ORDER-QUERY-03 v1.2.0 relevance=20.835076636884747 hash=ab22fc6042f08c9c src=specs/SPEC-ORDER-QUERY.md
+    hit SPEC-ORDER-QUERY/SPEC-ORDER-QUERY-05 v1.2.0 relevance=15.648516129704227 hash=fbfc6aa9d3b33bd1 src=specs/SPEC-ORDER-QUERY.md
+    hit SPEC-PRICING/SPEC-PRICING-01 v1.1.0 relevance=8.236625000006557 hash=d19350076e202099 src=specs/SPEC-PRICING.md
+    hit SPEC-PRICING/SPEC-PRICING-02 v1.1.0 relevance=6.772607208312088 hash=6699b10689ba3489 src=specs/SPEC-PRICING.md
+
+--- 必需来源主键回查（来源真实存在性校验） ---
+    spec  SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-01                 hash=e51e06379141c1eb src=specs/SPEC-ORDER-QUERY.md
+    spec  SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-02                 hash=a9746609da0161e8 src=specs/SPEC-ORDER-QUERY.md
+    spec  SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-03                 hash=ab22fc6042f08c9c src=specs/SPEC-ORDER-QUERY.md
+    spec  SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-04                 hash=90419d7516c5c3b4 src=specs/SPEC-ORDER-QUERY.md
+    spec  SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-05                 hash=fbfc6aa9d3b33bd1 src=specs/SPEC-ORDER-QUERY.md
+    spec  SPEC-PRICING:SPEC-PRICING-03                         hash=1c52e04b83cfbec1 src=specs/SPEC-PRICING.md
+    spec  SPEC-PRICING:SPEC-PRICING-01                         hash=d19350076e202099 src=specs/SPEC-PRICING.md
+    spec  SPEC-PRICING:SPEC-PRICING-02                         hash=6699b10689ba3489 src=specs/SPEC-PRICING.md
+    code  src/fulfillment/query.py::list_orders                hash=121dfbec6f086b83 src=src/fulfillment/query.py
+    code  src/fulfillment/query.py                             hash=9ae0d12f8e19c8d6 src=src/fulfillment/query.py
+    code  src/fulfillment/errors.py                            hash=4e398afbf3f2f735 src=src/fulfillment/errors.py
+    code  src/fulfillment/pricing.py                           hash=04e7f4f848a734c0 src=src/fulfillment/pricing.py
+    code  src/fulfillment/__init__.py                          hash=301958a43c8e6707 src=src/fulfillment/__init__.py
+    code  src/fulfillment/pricing.py::settlement_amount        hash=bfd196f8e2ace097 src=src/fulfillment/pricing.py
+    code  src/fulfillment/errors.py::InvalidFilterError        hash=565aeb463a378002 src=src/fulfillment/errors.py
+    code  src/fulfillment/models.py                            hash=ba9a95b8c8bd07f2 src=src/fulfillment/models.py
+    code  src/fulfillment/models.py::Order                     hash=898642a2aca033b9 src=src/fulfillment/models.py
+    code  src/fulfillment/errors.py::FulfillmentError          hash=acaab5fe2dfec76d src=src/fulfillment/errors.py
+    code  src/fulfillment/errors.py::InvalidAmountError        hash=bcd18f898b28492b src=src/fulfillment/errors.py
+    test  tests/test_query_target.py::test_status_filter_returns_only_matching_orders hash=99977a5f2584746a src=tests/test_query_target.py
+    test  tests/test_query_target.py                           hash=d9765f8088fe8dee src=tests/test_query_target.py
+    test  tests/test_query_target.py::test_status_filter_rejects_unknown_status hash=dc214f94c1e9892b src=tests/test_query_target.py
+    test  tests/test_query_target.py::test_min_amount_filter_is_inclusive hash=0f037a3fbc155530 src=tests/test_query_target.py
+    test  tests/test_query_target.py::test_min_amount_negative_is_rejected hash=69bd7aa2a9994aa2 src=tests/test_query_target.py
+    test  tests/test_query_target.py::test_combined_filters_are_intersection hash=101de6d82da70716 src=tests/test_query_target.py
+    test  tests/test_query_regression.py                       hash=4bb128e2584b9b4b src=tests/test_query_regression.py
+    test  tests/test_pricing.py                                hash=860e139d2245ceef src=tests/test_pricing.py
+    test  tests/test_query_regression.py::test_query_does_not_mutate_input hash=8d63d1b88a04af16 src=tests/test_query_regression.py
+    test  tests/test_query_regression.py::test_result_preserves_input_order hash=b79a397be160656d src=tests/test_query_regression.py
+    test  tests/test_query_regression.py::test_empty_input_returns_empty_list hash=6a92106635d0b6e5 src=tests/test_query_regression.py
+    test  tests/test_query_regression.py::test_query_without_filters_returns_everything hash=43f00c45d85669a4 src=tests/test_query_regression.py
+    test  tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter hash=b2af80fe1943ea5f src=tests/test_query_target.py
+    test  tests/test_query_target.py::test_status_filter_none_returns_all_orders hash=6456e334973328ec src=tests/test_query_target.py
+    缺失来源: （无）
+
+--- 上下文 digest: fff5ca481740789049e650e65506e2d7eacb533d3fdb368672dfface8214e151

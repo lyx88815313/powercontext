@@ -1,0 +1,12 @@
+# SDD 上下文模块运行依赖
+#
+# 安装： python -m pip install -r minimax/requirements.txt
+#
+# PyMySQL  连接 seekdb / OceanBase（MySQL 协议）
+# httpx    调用 MiniMax 与 PowerContext 的 HTTP 接口
+# PyYAML   解析任务定义文件的 YAML frontmatter
+# pytest   运行业务工程的测试
+PyMySQL==1.2.3
+httpx==0.28.1
+PyYAML==6.0.3
+pytest==9.2.0

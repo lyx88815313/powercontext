@@ -1,0 +1,29 @@
+"""订单列表查询。
+
+规格来源：SPEC-ORDER-QUERY（``specs/SPEC-ORDER-QUERY.md``）。
+"""
+
+from __future__ import annotations
+
+from typing import Iterable, Optional, Sequence
+
+from .models import Order
+
+
+def list_orders(
+    orders: Iterable[Order],
+    status: Optional[str] = None,
+    min_amount: Optional[float] = None,
+) -> Sequence[Order]:
+    """按状态与金额下界筛选订单。
+
+    Args:
+        orders: 待筛选的订单序列。
+        status: 订单状态过滤值；``None`` 表示不过滤。
+        min_amount: 金额下界过滤值；``None`` 表示不过滤。
+
+    Returns:
+        筛选后的订单序列，顺序与入参一致。
+    """
+    # SDD 备注：SPEC-ORDER-QUERY-01/02 尚未落地，当前实现只做透传。
+    return list(orders)

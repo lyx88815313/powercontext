@@ -1,0 +1,60 @@
+{
+  "batch_id": "236d88399ddba326",
+  "project": "fulfillment-svc",
+  "source_root": "D:\\seekdb-notes\\powercontext\\minimax\\demo",
+  "imported_at": "2026-10-28T16:12:01",
+  "spec_items": 8,
+  "code_units": 11,
+  "test_units": 19,
+  "changed_spec_items": [],
+  "changed_code_units": [
+    "src/fulfillment/query.py",
+    "src/fulfillment/query.py::list_orders"
+  ],
+  "changed_test_units": [],
+  "removed_spec_items": [],
+  "spec_item_ids": [
+    "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-01",
+    "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-02",
+    "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-03",
+    "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-04",
+    "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-05",
+    "SPEC-PRICING:SPEC-PRICING-01",
+    "SPEC-PRICING:SPEC-PRICING-02",
+    "SPEC-PRICING:SPEC-PRICING-03"
+  ],
+  "code_unit_ids": [
+    "src/fulfillment/__init__.py",
+    "src/fulfillment/errors.py",
+    "src/fulfillment/errors.py::FulfillmentError",
+    "src/fulfillment/errors.py::InvalidFilterError",
+    "src/fulfillment/errors.py::InvalidAmountError",
+    "src/fulfillment/models.py",
+    "src/fulfillment/models.py::Order",
+    "src/fulfillment/pricing.py",
+    "src/fulfillment/pricing.py::settlement_amount",
+    "src/fulfillment/query.py",
+    "src/fulfillment/query.py::list_orders"
+  ],
+  "test_unit_ids": [
+    "tests/conftest.py",
+    "tests/test_pricing.py",
+    "tests/test_pricing.py::test_settlement_without_discount",
+    "tests/test_pricing.py::test_settlement_with_discount_rounds_half_up",
+    "tests/test_pricing.py::test_settlement_rejects_negative_amount",
+    "tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate",
+    "tests/test_query_regression.py",
+    "tests/test_query_regression.py::test_query_without_filters_returns_everything",
+    "tests/test_query_regression.py::test_result_preserves_input_order",
+    "tests/test_query_regression.py::test_empty_input_returns_empty_list",
+    "tests/test_query_regression.py::test_query_does_not_mutate_input",
+    "tests/test_query_target.py",
+    "tests/test_query_target.py::test_status_filter_returns_only_matching_orders",
+    "tests/test_query_target.py::test_status_filter_rejects_unknown_status",
+    "tests/test_query_target.py::test_status_filter_none_returns_all_orders",
+    "tests/test_query_target.py::test_min_amount_filter_is_inclusive",
+    "tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter",
+    "tests/test_query_target.py::test_min_amount_negative_is_rejected",
+    "tests/test_query_target.py::test_combined_filters_are_intersection"
+  ]
+}

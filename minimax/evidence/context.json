@@ -1,0 +1,642 @@
+{
+  "task": {
+    "task_id": "TASK-001",
+    "title": "订单列表查询的状态筛选与金额下界筛选",
+    "objective": "在 fulfillment-svc 中实现 `fulfillment.query.list_orders` 的订单状态筛选与金额下界筛选， 使其符合 SPEC-ORDER-QUERY 的要求：status 为 None 时不过滤、非空时只返回状态匹配的订单、 非法 status 与负数 min_amount 必须抛出 InvalidFilterError；min_amount 按“大于等于”语义过滤、 min_amount == 0 等价于不过滤。同时必须保持 SPEC-ORDER-QUERY-03（顺序稳定）与 SPEC-ORDER-QUERY-04（空输入返回空列表）等既有行为不变，且不得影响结算模块行为。\n",
+    "required": {
+      "spec_items": [
+        "SPEC-ORDER-QUERY-01",
+        "SPEC-ORDER-QUERY-02",
+        "SPEC-ORDER-QUERY-03",
+        "SPEC-ORDER-QUERY-04",
+        "SPEC-ORDER-QUERY-05"
+      ],
+      "code_units": [
+        "src/fulfillment/query.py::list_orders",
+        "src/fulfillment/errors.py"
+      ],
+      "test_units": [
+        "tests/test_query_target.py::test_status_filter_returns_only_matching_orders",
+        "tests/test_query_target.py::test_status_filter_rejects_unknown_status",
+        "tests/test_query_target.py::test_min_amount_filter_is_inclusive",
+        "tests/test_query_target.py::test_min_amount_negative_is_rejected",
+        "tests/test_query_target.py::test_combined_filters_are_intersection",
+        "tests/test_query_regression.py",
+        "tests/test_pricing.py"
+      ]
+    },
+    "source_path": "D:\\seekdb-notes\\powercontext\\minimax\\demo\\tasks\\TASK-001-status-filter.md"
+  },
+  "query_text": "订单列表查询的状态筛选与金额下界筛选\n在 fulfillment-svc 中实现 `fulfillment.query.list_orders` 的订单状态筛选与金额下界筛选， 使其符合 SPEC-ORDER-QUERY 的要求：status 为 None 时不过滤、非空时只返回状态匹配的订单、 非法 status 与负数 min_amount 必须抛出 InvalidFilterError；min_amount 按“大于等于”语义过滤、 min_amount == 0 等价于不过滤。同时必须保持 SPEC-ORDER-QUERY-03（顺序稳定）与 SPEC-ORDER-QUERY-04（空输入返回空列表）等既有行为不变，且不得影响结算模块行为。\n\n# TASK-001 订单列表查询的状态筛选与金额下界筛选\n\n## 要改什么\n\n`fulfillment.query.list_orders` 目前只做透传（忽略 `status` 与 `min_amount`）。\n需要按 SPEC-ORDER-QUERY-01 / 02 / 05 实现两种筛选，并按 SPEC-ORDER-QUERY-01 / 02\n对非法入参抛出 `InvalidFilterError`。\n\n## 哪些原有行为必须保持\n\n- SPEC-ORDER-QUERY-03：筛选结果保持入参顺序，不得重新排序、不得去重。\n- SPEC-ORDER-QUERY-04：空输入返回空列表且不抛异常。\n- 不带过滤条件时返回全部订单。\n- 查询不得修改调用方传入的序列。\n- SPEC-PRICING-01/02/03：结算模块行为完全不受影响。\n\n## 验证方式\n\n```bash\ncd minimax/demo\npython -m pytest tests -v\n```\n\n- 目标功能测试：`tests/test_query_target.py`（修改前必须失败，修改后必须全部通过）\n- 回归测试：`tests/test_query_regression.py`、`tests/test_pricing.py`（修改前后都必须通过）",
+  "digest": "fff5ca481740789049e650e65506e2d7eacb533d3fdb368672dfface8214e151",
+  "specs": [
+    {
+      "category": "spec",
+      "unit_id": "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-01",
+      "path": "specs/SPEC-ORDER-QUERY.md",
+      "title": "SPEC-ORDER-QUERY / SPEC-ORDER-QUERY-01 订单状态筛选（目标条目）",
+      "source_path": "specs/SPEC-ORDER-QUERY.md",
+      "score": 0.0,
+      "extra": {
+        "spec_id": "SPEC-ORDER-QUERY",
+        "item_id": "SPEC-ORDER-QUERY-01",
+        "version": "1.2.0",
+        "tags": "fulfillment-team,effective,`fulfillment.query`",
+        "content_hash": "e51e06379141c1ebda6bf2cdfb65cc0c9879125e50a352a1dcde88543a1f6ff8",
+        "updated_at": "2026-10-28 16:11:53"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-02",
+      "path": "specs/SPEC-ORDER-QUERY.md",
+      "title": "SPEC-ORDER-QUERY / SPEC-ORDER-QUERY-02 金额下界筛选（目标条目）",
+      "source_path": "specs/SPEC-ORDER-QUERY.md",
+      "score": 0.0,
+      "extra": {
+        "spec_id": "SPEC-ORDER-QUERY",
+        "item_id": "SPEC-ORDER-QUERY-02",
+        "version": "1.2.0",
+        "tags": "fulfillment-team,effective,`fulfillment.query`",
+        "content_hash": "a9746609da0161e89ca592fab8d889fb39a86193fa365e0be9158f04b4e65783",
+        "updated_at": "2026-10-28 16:11:54"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-03",
+      "path": "specs/SPEC-ORDER-QUERY.md",
+      "title": "SPEC-ORDER-QUERY / SPEC-ORDER-QUERY-03 结果稳定性",
+      "source_path": "specs/SPEC-ORDER-QUERY.md",
+      "score": 0.0,
+      "extra": {
+        "spec_id": "SPEC-ORDER-QUERY",
+        "item_id": "SPEC-ORDER-QUERY-03",
+        "version": "1.2.0",
+        "tags": "fulfillment-team,effective,`fulfillment.query`",
+        "content_hash": "ab22fc6042f08c9c811483039e4591a307bff99f9010e398f808e03c8241c31a",
+        "updated_at": "2026-10-28 16:11:54"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-04",
+      "path": "specs/SPEC-ORDER-QUERY.md",
+      "title": "SPEC-ORDER-QUERY / SPEC-ORDER-QUERY-04 空输入",
+      "source_path": "specs/SPEC-ORDER-QUERY.md",
+      "score": 0.0,
+      "extra": {
+        "spec_id": "SPEC-ORDER-QUERY",
+        "item_id": "SPEC-ORDER-QUERY-04",
+        "version": "1.2.0",
+        "tags": "fulfillment-team,effective,`fulfillment.query`",
+        "content_hash": "90419d7516c5c3b472de1f840e58ce8201badc8f194d62914ff822f5548902f2",
+        "updated_at": "2026-10-28 16:11:54"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-05",
+      "path": "specs/SPEC-ORDER-QUERY.md",
+      "title": "SPEC-ORDER-QUERY / SPEC-ORDER-QUERY-05 参数互不干扰",
+      "source_path": "specs/SPEC-ORDER-QUERY.md",
+      "score": 0.0,
+      "extra": {
+        "spec_id": "SPEC-ORDER-QUERY",
+        "item_id": "SPEC-ORDER-QUERY-05",
+        "version": "1.2.0",
+        "tags": "fulfillment-team,effective,`fulfillment.query`",
+        "content_hash": "fbfc6aa9d3b33bd1cf99a8a34bcbe82c29cd2f3f5b4b828f04af9c47f3867444",
+        "updated_at": "2026-10-28 16:11:54"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-PRICING:SPEC-PRICING-03",
+      "path": "specs/SPEC-PRICING.md",
+      "title": "SPEC-PRICING / SPEC-PRICING-03 结算公式",
+      "source_path": "specs/SPEC-PRICING.md",
+      "score": 37.934842,
+      "extra": {
+        "spec_id": "SPEC-PRICING",
+        "item_id": "SPEC-PRICING-03",
+        "version": "1.1.0",
+        "tags": "fulfillment-team,effective,`fulfillment.pricing`",
+        "content_hash": "1c52e04b83cfbec1c498dbb75a55edb7db55d8308bc78366a51021aceaf00b7a",
+        "updated_at": "2026-10-28 16:11:55",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-PRICING:SPEC-PRICING-01",
+      "path": "specs/SPEC-PRICING.md",
+      "title": "SPEC-PRICING / SPEC-PRICING-01 金额合法性",
+      "source_path": "specs/SPEC-PRICING.md",
+      "score": 9.146591,
+      "extra": {
+        "spec_id": "SPEC-PRICING",
+        "item_id": "SPEC-PRICING-01",
+        "version": "1.1.0",
+        "tags": "fulfillment-team,effective,`fulfillment.pricing`",
+        "content_hash": "d19350076e202099d571784ac9b5b769ad6ff93fde56ff03a8815930e528afcb",
+        "updated_at": "2026-10-28 16:11:55",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "spec",
+      "unit_id": "SPEC-PRICING:SPEC-PRICING-02",
+      "path": "specs/SPEC-PRICING.md",
+      "title": "SPEC-PRICING / SPEC-PRICING-02 折扣率合法性",
+      "source_path": "specs/SPEC-PRICING.md",
+      "score": 7.631061,
+      "extra": {
+        "spec_id": "SPEC-PRICING",
+        "item_id": "SPEC-PRICING-02",
+        "version": "1.1.0",
+        "tags": "fulfillment-team,effective,`fulfillment.pricing`",
+        "content_hash": "6699b10689ba3489ea71b673989c9932a8d43899f3d69c61727da8322e03fe68",
+        "updated_at": "2026-10-28 16:11:55",
+        "retrieval_mode": "fulltext"
+      }
+    }
+  ],
+  "codes": [
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/query.py::list_orders",
+      "path": "src/fulfillment/query.py",
+      "title": "list_orders",
+      "source_path": "src/fulfillment/query.py",
+      "score": 0.0,
+      "extra": {
+        "symbol": "list_orders",
+        "kind": "function",
+        "language": "python",
+        "content_hash": "121dfbec6f086b8329e336615deadda99e32dc62e9a6fa157dc006145bebe2c0",
+        "updated_at": "2026-10-28 16:11:58"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/query.py",
+      "path": "src/fulfillment/query.py",
+      "title": "src/fulfillment/query.py",
+      "source_path": "src/fulfillment/query.py",
+      "score": 0.0,
+      "extra": {
+        "symbol": "",
+        "kind": "file",
+        "language": "python",
+        "content_hash": "9ae0d12f8e19c8d6a4bd498b55a69f1bf2909ad5dfcf7f36faff38000609ece6",
+        "updated_at": "2026-10-28 16:11:57"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/errors.py",
+      "path": "src/fulfillment/errors.py",
+      "title": "src/fulfillment/errors.py",
+      "source_path": "src/fulfillment/errors.py",
+      "score": 0.0,
+      "extra": {
+        "symbol": "",
+        "kind": "file",
+        "language": "python",
+        "content_hash": "4e398afbf3f2f735197f31cc2472b3f9656346d6bfad8f9d94471f5534184647",
+        "updated_at": "2026-10-28 16:11:56"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/pricing.py",
+      "path": "src/fulfillment/pricing.py",
+      "title": "src/fulfillment/pricing.py",
+      "source_path": "src/fulfillment/pricing.py",
+      "score": 45.258307,
+      "extra": {
+        "symbol": "",
+        "kind": "file",
+        "language": "python",
+        "content_hash": "04e7f4f848a734c0aff45419b98893245ddf9d8c7593763609906e78f1b5e039",
+        "updated_at": "2026-10-28 16:11:57",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/__init__.py",
+      "path": "src/fulfillment/__init__.py",
+      "title": "src/fulfillment/__init__.py",
+      "source_path": "src/fulfillment/__init__.py",
+      "score": 26.771788,
+      "extra": {
+        "symbol": "",
+        "kind": "file",
+        "language": "python",
+        "content_hash": "301958a43c8e6707ac118bbf24d8cb4d812bf652139ab73604d3151dc3c20f5d",
+        "updated_at": "2026-10-28 16:11:55",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/pricing.py::settlement_amount",
+      "path": "src/fulfillment/pricing.py",
+      "title": "settlement_amount",
+      "source_path": "src/fulfillment/pricing.py",
+      "score": 21.982589,
+      "extra": {
+        "symbol": "settlement_amount",
+        "kind": "function",
+        "language": "python",
+        "content_hash": "bfd196f8e2ace097f2094f39f06c95658323907ab1c8a10cd9895d1669ea11f8",
+        "updated_at": "2026-10-28 16:11:57",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/errors.py::InvalidFilterError",
+      "path": "src/fulfillment/errors.py",
+      "title": "InvalidFilterError",
+      "source_path": "src/fulfillment/errors.py",
+      "score": 20.179759,
+      "extra": {
+        "symbol": "InvalidFilterError",
+        "kind": "class",
+        "language": "python",
+        "content_hash": "565aeb463a378002e054143871db1a87a47d74d8de58457f8638ce60849543b3",
+        "updated_at": "2026-10-28 16:11:56",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/models.py",
+      "path": "src/fulfillment/models.py",
+      "title": "src/fulfillment/models.py",
+      "source_path": "src/fulfillment/models.py",
+      "score": 13.068308,
+      "extra": {
+        "symbol": "",
+        "kind": "file",
+        "language": "python",
+        "content_hash": "ba9a95b8c8bd07f23744b45ae41cae28019be3edc3c66c697c51abe8b9761165",
+        "updated_at": "2026-10-28 16:11:56",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/models.py::Order",
+      "path": "src/fulfillment/models.py",
+      "title": "Order",
+      "source_path": "src/fulfillment/models.py",
+      "score": 12.524431,
+      "extra": {
+        "symbol": "Order",
+        "kind": "class",
+        "language": "python",
+        "content_hash": "898642a2aca033b9ad0984ef7a1d833186fca483034129a96a106b8cf582bbca",
+        "updated_at": "2026-10-28 16:11:57",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/errors.py::FulfillmentError",
+      "path": "src/fulfillment/errors.py",
+      "title": "FulfillmentError",
+      "source_path": "src/fulfillment/errors.py",
+      "score": 7.824017,
+      "extra": {
+        "symbol": "FulfillmentError",
+        "kind": "class",
+        "language": "python",
+        "content_hash": "acaab5fe2dfec76dfa5f1defaab7eb10e31a5d8b12ed8dcf1d25eb7f3a38277d",
+        "updated_at": "2026-10-28 16:11:56",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "code",
+      "unit_id": "src/fulfillment/errors.py::InvalidAmountError",
+      "path": "src/fulfillment/errors.py",
+      "title": "InvalidAmountError",
+      "source_path": "src/fulfillment/errors.py",
+      "score": 7.093282,
+      "extra": {
+        "symbol": "InvalidAmountError",
+        "kind": "class",
+        "language": "python",
+        "content_hash": "bcd18f898b28492b9203f02859a41020f180b05dd33c256637f21aa21e7d243c",
+        "updated_at": "2026-10-28 16:11:56",
+        "retrieval_mode": "fulltext"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_status_filter_returns_only_matching_orders",
+      "path": "tests/test_query_target.py",
+      "title": "test_status_filter_returns_only_matching_orders",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "test_status_filter_returns_only_matching_orders",
+        "kind": "test_function",
+        "content_hash": "99977a5f2584746ad247dd2952a1dfc3274f4e4e56ed889c7234b025191e2973",
+        "updated_at": "2026-10-28 16:12:01"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py",
+      "path": "tests/test_query_target.py",
+      "title": "tests/test_query_target.py",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "",
+        "kind": "test_file",
+        "content_hash": "d9765f8088fe8deefdb0c0dccfac8fbb03c7ae04cb9deaf76df304cee33e9f74",
+        "updated_at": "2026-10-28 16:12:00"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_status_filter_rejects_unknown_status",
+      "path": "tests/test_query_target.py",
+      "title": "test_status_filter_rejects_unknown_status",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "test_status_filter_rejects_unknown_status",
+        "kind": "test_function",
+        "content_hash": "dc214f94c1e9892b1a0c40693dd27503181ef3767901b6db0d052d51e5472abc",
+        "updated_at": "2026-10-28 16:12:01"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_min_amount_filter_is_inclusive",
+      "path": "tests/test_query_target.py",
+      "title": "test_min_amount_filter_is_inclusive",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "test_min_amount_filter_is_inclusive",
+        "kind": "test_function",
+        "content_hash": "0f037a3fbc1555309c0281e93bef26134f55706d606fbb502e8508e23addc312",
+        "updated_at": "2026-10-28 16:12:01"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_min_amount_negative_is_rejected",
+      "path": "tests/test_query_target.py",
+      "title": "test_min_amount_negative_is_rejected",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "test_min_amount_negative_is_rejected",
+        "kind": "test_function",
+        "content_hash": "69bd7aa2a9994aa2faf24ea9d1fb4126d9947dec98cad4a1568758795a4c02a0",
+        "updated_at": "2026-10-28 16:12:01"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_combined_filters_are_intersection",
+      "path": "tests/test_query_target.py",
+      "title": "test_combined_filters_are_intersection",
+      "source_path": "tests/test_query_target.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "test_combined_filters_are_intersection",
+        "kind": "test_function",
+        "content_hash": "101de6d82da707169877f9cc7895962b4d707a91f63a7c8d563c1e21ab1e6d56",
+        "updated_at": "2026-10-28 16:12:02"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_regression.py",
+      "path": "tests/test_query_regression.py",
+      "title": "tests/test_query_regression.py",
+      "source_path": "tests/test_query_regression.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "",
+        "kind": "test_file",
+        "content_hash": "4bb128e2584b9b4b1c1d6b9b6f9892a6f18cbe9690a4d994c9dc1e1939d1d7d2",
+        "updated_at": "2026-10-28 16:11:59"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_pricing.py",
+      "path": "tests/test_pricing.py",
+      "title": "tests/test_pricing.py",
+      "source_path": "tests/test_pricing.py",
+      "score": 0.0,
+      "extra": {
+        "test_name": "",
+        "kind": "test_file",
+        "content_hash": "860e139d2245ceef4a1c835b7b3f85545259672ae85855b66a71c7965eff38b4",
+        "updated_at": "2026-10-28 16:11:58"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_regression.py::test_query_does_not_mutate_input",
+      "path": "tests/test_query_regression.py",
+      "title": "test_query_does_not_mutate_input",
+      "source_path": "tests/test_query_regression.py",
+      "score": 55.788998,
+      "extra": {
+        "test_name": "test_query_does_not_mutate_input",
+        "kind": "test_function",
+        "content_hash": "8d63d1b88a04af1697759c47b7ab107be6d23b662497d5677fe10e14e9040c98",
+        "updated_at": "2026-10-28 16:12:00",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_regression.py::test_result_preserves_input_order",
+      "path": "tests/test_query_regression.py",
+      "title": "test_result_preserves_input_order",
+      "source_path": "tests/test_query_regression.py",
+      "score": 54.590771,
+      "extra": {
+        "test_name": "test_result_preserves_input_order",
+        "kind": "test_function",
+        "content_hash": "b79a397be160656db5befe547eb9f7f9eb24ff47136c9eedabb1dcb1508f7f9e",
+        "updated_at": "2026-10-28 16:12:00",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_regression.py::test_empty_input_returns_empty_list",
+      "path": "tests/test_query_regression.py",
+      "title": "test_empty_input_returns_empty_list",
+      "source_path": "tests/test_query_regression.py",
+      "score": 48.79355,
+      "extra": {
+        "test_name": "test_empty_input_returns_empty_list",
+        "kind": "test_function",
+        "content_hash": "6a92106635d0b6e54d9e64e711169960f90becdcb75acf9e110530f13ad5523e",
+        "updated_at": "2026-10-28 16:12:00",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_regression.py::test_query_without_filters_returns_everything",
+      "path": "tests/test_query_regression.py",
+      "title": "test_query_without_filters_returns_everything",
+      "source_path": "tests/test_query_regression.py",
+      "score": 43.206766,
+      "extra": {
+        "test_name": "test_query_without_filters_returns_everything",
+        "kind": "test_function",
+        "content_hash": "43f00c45d85669a4bb871212c90285b19115a85e2ff70e02a7e0608b83af3cf5",
+        "updated_at": "2026-10-28 16:12:00",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter",
+      "path": "tests/test_query_target.py",
+      "title": "test_min_amount_zero_is_equivalent_to_no_filter",
+      "source_path": "tests/test_query_target.py",
+      "score": 38.550744,
+      "extra": {
+        "test_name": "test_min_amount_zero_is_equivalent_to_no_filter",
+        "kind": "test_function",
+        "content_hash": "b2af80fe1943ea5fe792f9c0a24025326154c52191fd0e5d9b59ad5775d30768",
+        "updated_at": "2026-10-28 16:12:01",
+        "retrieval_mode": "fulltext"
+      }
+    },
+    {
+      "category": "test",
+      "unit_id": "tests/test_query_target.py::test_status_filter_none_returns_all_orders",
+      "path": "tests/test_query_target.py",
+      "title": "test_status_filter_none_returns_all_orders",
+      "source_path": "tests/test_query_target.py",
+      "score": 31.938183,
+      "extra": {
+        "test_name": "test_status_filter_none_returns_all_orders",
+        "kind": "test_function",
+        "content_hash": "6456e334973328ec77ee8dd26ff03368d56dc2df598c0590d8ae7572c5784432",
+        "updated_at": "2026-10-28 16:12:01",
+        "retrieval_mode": "fulltext"
+      }
+    }
+  ],
+  "missing_sources": [],
+  "db_evidence": {
+    "server_version": "5.7.25-OceanBase seekdb-v1.4.0.0",
+    "database": "sdd_context",
+    "fulltext_available": true,
+    "query_tokens": 905,
+    "queries": {
+      "spec_item": [
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-02",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-01",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-03",
+        "SPEC-PRICING:SPEC-PRICING-03",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-04",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-05",
+        "SPEC-PRICING:SPEC-PRICING-01",
+        "SPEC-PRICING:SPEC-PRICING-02"
+      ],
+      "code_unit": [
+        "src/fulfillment/query.py",
+        "src/fulfillment/query.py::list_orders",
+        "src/fulfillment/pricing.py",
+        "src/fulfillment/__init__.py",
+        "src/fulfillment/errors.py",
+        "src/fulfillment/pricing.py::settlement_amount",
+        "src/fulfillment/errors.py::InvalidFilterError",
+        "src/fulfillment/models.py",
+        "src/fulfillment/models.py::Order",
+        "src/fulfillment/errors.py::FulfillmentError",
+        "src/fulfillment/errors.py::InvalidAmountError"
+      ],
+      "test_unit": [
+        "tests/test_query_regression.py",
+        "tests/test_query_target.py",
+        "tests/test_pricing.py",
+        "tests/test_query_regression.py::test_query_does_not_mutate_input",
+        "tests/test_query_regression.py::test_result_preserves_input_order",
+        "tests/test_query_regression.py::test_empty_input_returns_empty_list",
+        "tests/test_query_regression.py::test_query_without_filters_returns_everything",
+        "tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter",
+        "tests/test_query_target.py::test_status_filter_returns_only_matching_orders",
+        "tests/test_query_target.py::test_min_amount_filter_is_inclusive",
+        "tests/test_query_target.py::test_min_amount_negative_is_rejected",
+        "tests/test_query_target.py::test_status_filter_none_returns_all_orders"
+      ]
+    },
+    "row_counts": {
+      "spec_item": 8,
+      "code_unit": 11,
+      "test_unit": 19
+    },
+    "retrieval_mode": {
+      "spec_item": "fulltext",
+      "code_unit": "fulltext",
+      "test_unit": "fulltext"
+    },
+    "missing_sources": [],
+    "selected": {
+      "specs": [
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-01",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-02",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-03",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-04",
+        "SPEC-ORDER-QUERY:SPEC-ORDER-QUERY-05",
+        "SPEC-PRICING:SPEC-PRICING-03",
+        "SPEC-PRICING:SPEC-PRICING-01",
+        "SPEC-PRICING:SPEC-PRICING-02"
+      ],
+      "codes": [
+        "src/fulfillment/query.py::list_orders",
+        "src/fulfillment/query.py",
+        "src/fulfillment/errors.py",
+        "src/fulfillment/pricing.py",
+        "src/fulfillment/__init__.py",
+        "src/fulfillment/pricing.py::settlement_amount",
+        "src/fulfillment/errors.py::InvalidFilterError",
+        "src/fulfillment/models.py",
+        "src/fulfillment/models.py::Order",
+        "src/fulfillment/errors.py::FulfillmentError",
+        "src/fulfillment/errors.py::InvalidAmountError"
+      ],
+      "tests": [
+        "tests/test_query_target.py::test_status_filter_returns_only_matching_orders",
+        "tests/test_query_target.py",
+        "tests/test_query_target.py::test_status_filter_rejects_unknown_status",
+        "tests/test_query_target.py::test_min_amount_filter_is_inclusive",
+        "tests/test_query_target.py::test_min_amount_negative_is_rejected",
+        "tests/test_query_target.py::test_combined_filters_are_intersection",
+        "tests/test_query_regression.py",
+        "tests/test_pricing.py",
+        "tests/test_query_regression.py::test_query_does_not_mutate_input",
+        "tests/test_query_regression.py::test_result_preserves_input_order",
+        "tests/test_query_regression.py::test_empty_input_returns_empty_list",
+        "tests/test_query_regression.py::test_query_without_filters_returns_everything",
+        "tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter",
+        "tests/test_query_target.py::test_status_filter_none_returns_all_orders"
+      ]
+    }
+  }
+}

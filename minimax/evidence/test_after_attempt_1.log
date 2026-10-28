@@ -1,0 +1,33 @@
+# command: D:\seekdb-notes\venv-sdd\Scripts\python.exe -m pytest tests -v --tb=short
+# cwd: D:\seekdb-notes\powercontext\minimax\demo
+# exit_code: 0
+# duration_seconds: 0.645
+# label: after-change-attempt-1
+# timestamp: 2026-10-28T16:12:11
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.2.0, pluggy-1.7.0 -- D:\seekdb-notes\venv-sdd\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\seekdb-notes\powercontext\minimax\demo
+plugins: anyio-4.15.1
+collecting ... collected 17 items
+
+tests/test_pricing.py::test_settlement_without_discount PASSED           [  5%]
+tests/test_pricing.py::test_settlement_with_discount_rounds_half_up PASSED [ 11%]
+tests/test_pricing.py::test_settlement_rejects_negative_amount PASSED    [ 17%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[-0.1] PASSED [ 23%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[1.0] PASSED [ 29%]
+tests/test_pricing.py::test_settlement_rejects_invalid_discount_rate[1.5] PASSED [ 35%]
+tests/test_query_regression.py::test_query_without_filters_returns_everything PASSED [ 41%]
+tests/test_query_regression.py::test_result_preserves_input_order PASSED [ 47%]
+tests/test_query_regression.py::test_empty_input_returns_empty_list PASSED [ 52%]
+tests/test_query_regression.py::test_query_does_not_mutate_input PASSED  [ 58%]
+tests/test_query_target.py::test_status_filter_returns_only_matching_orders PASSED [ 64%]
+tests/test_query_target.py::test_status_filter_rejects_unknown_status PASSED [ 70%]
+tests/test_query_target.py::test_status_filter_none_returns_all_orders PASSED [ 76%]
+tests/test_query_target.py::test_min_amount_filter_is_inclusive PASSED   [ 82%]
+tests/test_query_target.py::test_min_amount_zero_is_equivalent_to_no_filter PASSED [ 88%]
+tests/test_query_target.py::test_min_amount_negative_is_rejected PASSED  [ 94%]
+tests/test_query_target.py::test_combined_filters_are_intersection PASSED [100%]
+
+============================= 17 passed in 0.07s ==============================

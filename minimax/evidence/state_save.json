@@ -1,0 +1,9 @@
+{
+  "scope_id": "scp_5hcfgv3qqkhn5t21ndt1aty2qt",
+  "memory_kind": "sdd-task-state:TASK-001",
+  "snapshot_source_id": "sdd-task-state:TASK-001:a9729911eb3c",
+  "outcome_source_id": "sdd-task-outcome:TASK-001:a9729911eb3c",
+  "memory_changed": true,
+  "digest": "a9729911eb3c334cbe6e44f730df48afd86b82f2fd1e08ac0113ff5e9a61acc0",
+  "outcome_error": ""
+}
