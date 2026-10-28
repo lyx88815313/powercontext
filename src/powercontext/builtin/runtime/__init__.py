@@ -98,6 +98,14 @@ from powercontext.builtin.runtime.config import (
     InferenceConfig,
     RuntimeConfig,
 )
+from powercontext.builtin.runtime.context_pack import (
+    CONTEXT_PACK_DELTA_SCHEMA,
+    CONTEXT_PACK_SCHEMA,
+    ContextPack,
+    ContextPackDelta,
+    ContextPackError,
+    apply_context_pack_delta,
+)
 from powercontext.builtin.runtime.decision_model import (
     DecisionKind,
     DecisionModel,
@@ -210,6 +218,8 @@ from powercontext.builtin.statistics import (
 )
 
 __all__ = [
+    "CONTEXT_PACK_DELTA_SCHEMA",
+    "CONTEXT_PACK_SCHEMA",
     "ActivateHandoff",
     "ApproveArtifactCandidateRequest",
     "ArtifactInventoryStatistics",
@@ -231,6 +241,9 @@ __all__ = [
     "ConnectorCheckpointState",
     "ContextAssembly",
     "ContextAssemblySection",
+    "ContextPack",
+    "ContextPackDelta",
+    "ContextPackError",
     "CreateDreamRunRequest",
     "DatabaseConfig",
     "DecisionKind",
@@ -378,6 +391,7 @@ __all__ = [
     "TopicMemoryProcessingUnavailableError",
     "UsageStatistics",
     "WorkApplication",
+    "apply_context_pack_delta",
     "build_memory_write_gate",
     "dependency_readiness_probe",
     "open_builtin_contexts",
