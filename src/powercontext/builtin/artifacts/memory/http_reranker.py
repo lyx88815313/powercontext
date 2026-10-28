@@ -140,7 +140,10 @@ def _parse_score_entry(entry: Any) -> tuple[int, float]:
     value = entry["score"]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError("rerank score must be a number")  # noqa: TRY003, TRY004
-    score = float(value)
+    try:
+        score = float(value)
+    except OverflowError as error:
+        raise ValueError("rerank score must be finite") from error  # noqa: TRY003
     if not math.isfinite(score):
         raise ValueError("rerank score must be finite")  # noqa: TRY003
     return rank, score
