@@ -34,6 +34,11 @@ from powercontext.builtin.runtime.prepared_code import (
     PreparedCodeCandidate,
     assemble_code,
 )
+from powercontext.builtin.runtime.prepared_evidence import (
+    EvidenceDocument,
+    EvidenceSpan,
+    select_evidence_spans,
+)
 from powercontext.builtin.runtime.prepared_text import (
     TRUST_POLICY,
     ContextTextItem,
@@ -100,12 +105,30 @@ class PreparedContextBuild:
     **not** a field here: ``ScopedContextApplication._prepare`` returns ``build.context`` and
     discards the rest, so such a field would have no production observer. The trace is
     delivered through the Runtime's optional ``RecallEffortSink`` instead.
+
+    ``fragments`` is filled only by the evidence-selection path (``evidence_selection=True``);
+    the ordinary prepare path leaves it empty and keeps byte-for-byte compatible output.
     """
 
     context: PreparedContext
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
+    fragments: tuple[PreparedFragment, ...] = ()
+
+
+@dataclass(frozen=True)
+class PreparedFragment:
+    """One literal slice of a recalled Memory entry, verifiable through its own citation.
+
+    ``text`` is always ``entry.text[start:end]``: selected evidence is quoted, never rewritten,
+    translated, or summarised, and the address pins the exact entry version it came from.
+    """
+
+    address: MemoryEntryAddress
+    start: int
+    end: int
+    text: str
 
 
 @dataclass(frozen=True)
@@ -211,6 +234,14 @@ class PreparedContextBuilder:
         profile_candidates: Sequence[PreparedProfileCandidate] = (),
         code_candidates: Sequence[PreparedCodeCandidate] = (),
     ) -> PreparedContextBuild:
+        # Evidence selection assembles quoted Memory fragments only, so it takes precedence over
+        # code assembly: by contract `include_code` contributes no candidates on this path.
+        if request.evidence_selection:
+            return self._build_evidence_result(
+                request=request,
+                memory_candidates=memory_candidates,
+            )
+
         if request.include_code:
 
             def historical(history_request: PrepareContextRequest, entries: int) -> PreparedContextBuild:
@@ -277,6 +308,16 @@ class PreparedContextBuilder:
         counters because both go through :meth:`_select_entries`.
         """
 
+        if request.evidence_selection:
+            build = self._build_evidence_result(request=request, memory_candidates=memory_candidates)
+            return RecallBudgetView(
+                max_bytes=request.max_bytes,
+                delivered_items=len(build.fragments),
+                truncated_items=0,
+                dropped_items=0,
+                unused_bytes=max(0, request.max_bytes - build.context.content_bytes),
+            )
+
         content, origins, omissions = self._select_entries(
             request=request,
             current_scope_id=current_scope_id,
@@ -293,6 +334,79 @@ class PreparedContextBuilder:
             dropped_items=omissions.dropped_items,
             unused_bytes=max(0, request.max_bytes - content_bytes),
         )
+
+    def _build_evidence_result(
+        self,
+        *,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> PreparedContextBuild:
+        """Select literal query-relevant fragments instead of whole candidate entries.
+
+        The budget is charged against the fully rendered context — trust policy, envelope
+        markers, JSON, citation, and body — so a fragment is only accepted when everything it
+        costs still fits. An empty result is legal and renders as the empty context.
+        """
+
+        documents = self._evidence_documents(memory_candidates)
+        if not documents:
+            return PreparedContextBuild(context=self.empty(), origins=())
+
+        def fits(spans: Sequence[EvidenceSpan]) -> bool:
+            return len(self._render_evidence(_fragments(spans)).encode("utf-8")) <= request.max_bytes
+
+        spans = select_evidence_spans(query=request.query, documents=documents, fits=fits)
+        fragments = _fragments(spans)
+        if not fragments:
+            return PreparedContextBuild(context=self.empty(), origins=())
+
+        content = self._render_evidence(fragments)
+        content_bytes = len(content.encode("utf-8"))
+        if content_bytes > request.max_bytes:  # pragma: no cover - the predicate guarantees this
+            raise PreparedContextInvariantError("output-budget")
+        return PreparedContextBuild(
+            context=PreparedContext(status="ready", content=content, content_bytes=content_bytes),
+            origins=tuple(fragment.address for fragment in fragments),
+            fragments=fragments,
+        )
+
+    def _render_evidence(self, fragments: Sequence[PreparedFragment]) -> str:
+        envelope = {
+            "trust": "untrusted_history",
+            "items": [_render_fragment(fragment) for fragment in fragments],
+        }
+        encoded = json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+        return "\n\n".join((TRUST_POLICY, f"{_BEGIN_MARKER}\n{encoded}\n{_END_MARKER}"))
+
+    def _evidence_documents(
+        self,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> tuple[EvidenceDocument, ...]:
+        """Project candidate hits onto addressable documents, preserving recall order."""
+
+        documents: list[EvidenceDocument] = []
+        seen: set[tuple[str, str, str]] = set()
+        for candidates in memory_candidates:
+            if candidates.hits and candidates.memory_ref is None:
+                raise PreparedContextInvariantError("memory-ref-missing")
+            for hit in candidates.hits:
+                if hit.memory_ref != candidates.memory_ref:
+                    raise PreparedContextInvariantError("memory-ref-mismatch")
+                if not hit.entry_id.strip() or not hit.entry_version_id.strip() or not hit.text.strip():
+                    continue
+                identity = (candidates.scope_id, hit.entry_id, hit.entry_version_id)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                documents.append(
+                    EvidenceDocument(
+                        memory=ArtifactAddress(scope_id=candidates.scope_id, artifact=candidates.memory_ref),
+                        entry_id=hit.entry_id,
+                        entry_version_id=hit.entry_version_id,
+                        text=hit.text,
+                    )
+                )
+        return tuple(documents)
 
     def _select_entries(
         self,
@@ -658,6 +772,40 @@ class PreparedContextBuilder:
         if best is None:
             return _EntryFit(dropped_no_fitting_truncation=True)
         return _EntryFit(entry=best)
+
+
+def _fragments(spans: Sequence[EvidenceSpan]) -> tuple[PreparedFragment, ...]:
+    """Attach the citation identity to each selected span."""
+
+    return tuple(
+        PreparedFragment(
+            address=MemoryEntryAddress(
+                memory=span.memory,
+                entry_id=span.entry_id,
+                entry_version_id=span.entry_version_id,
+            ),
+            start=span.start,
+            end=span.end,
+            text=span.text,
+        )
+        for span in spans
+    )
+
+
+def _render_fragment(fragment: PreparedFragment) -> dict[str, object]:
+    """Render one item: exact citation, exact text, exact character range."""
+
+    return {
+        "citation": {
+            "scope_id": fragment.address.memory.scope_id,
+            "memory_ref": fragment.address.memory.artifact.model_dump(mode="json"),
+            "entry_id": fragment.address.entry_id,
+            "entry_version_id": fragment.address.entry_version_id,
+        },
+        "content": fragment.text,
+        "start": fragment.start,
+        "end": fragment.end,
+    }
 
 
 def _interleave(
