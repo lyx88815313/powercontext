@@ -305,15 +305,24 @@ class ArtifactProcessingBindingStateRepository:
         binding_name: str,
         checkpoint_at: datetime | None = None,
         /,
+        *,
+        advance_checkpoint: bool = True,
     ) -> StoredArtifactProcessingBindingState:
-        """Freeze a bounded admission scan; caller must hold its valid fence."""
+        """Freeze a bounded admission scan; caller must hold its valid fence.
+
+        A count-triggered scan has no time baseline of its own, so it must not
+        move the interval checkpoint that the independent time condition uses.
+        """
 
         current = await self.load(connection, binding_name, for_update=True)
         if current is not None and current.scan_in_progress:
             return current
-        checkpoint = await database_utc_now(connection) if checkpoint_at is None else checkpoint_at
-        if checkpoint.tzinfo is not None:
-            checkpoint = checkpoint.astimezone(UTC).replace(tzinfo=None)
+        if advance_checkpoint or current is None:
+            checkpoint = await database_utc_now(connection) if checkpoint_at is None else checkpoint_at
+            if checkpoint.tzinfo is not None:
+                checkpoint = checkpoint.astimezone(UTC).replace(tzinfo=None)
+        else:
+            checkpoint = current.last_schedule_checkpoint_at
         values = {
             "last_schedule_checkpoint_at": checkpoint,
             "scan_generation": 1 if current is None else current.scan_generation + 1,

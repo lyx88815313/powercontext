@@ -567,6 +567,7 @@ async def open_builtin_runtime(
                         else b.automatic_processing_interval.total_seconds(),
                         "cron": b.cron,
                         "timezone": b.timezone,
+                        "source_count_threshold": b.source_count_threshold,
                     }
                     for b in processing_bindings
                 ],
@@ -719,8 +720,12 @@ def _artifact_processing_bindings(  # noqa: C901 - validate and assemble one reg
         "profile": config.runtime.profile_schedule_enabled or None,
         "skill": None,
     }
+    count_thresholds = {
+        "memory": config.runtime.memory_source_count_threshold,
+        "topic-memory": config.runtime.topic_memory_source_count_threshold,
+    }
     for family, schedule in automatic.items():
-        if schedule is not None and family not in declared | registered:
+        if (schedule is not None or count_thresholds.get(family) is not None) and family not in declared | registered:
             if (
                 family == "topic-memory"
                 and config.runtime.artifact_processing_families is None
@@ -783,6 +788,7 @@ def _artifact_processing_bindings(  # noqa: C901 - validate and assemble one reg
                 if family == "profile" and config.runtime.profile_schedule_enabled
                 else None,
                 timezone=config.runtime.profile_timezone if family == "profile" else "Asia/Shanghai",
+                source_count_threshold=count_thresholds.get(family),
                 pending_provider=None
                 if family == "skill"
                 else SourceProcessingPendingProvider(contexts.database, binding, family),

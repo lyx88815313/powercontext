@@ -45,6 +45,38 @@ async def enabled_profile_scopes(connection: AsyncConnection, scope_ids: tuple[s
     return frozenset(rows)
 
 
+async def source_count_ready_scopes(
+    connection: AsyncConnection,
+    binding_name: str,
+    scope_ids: tuple[str, ...],
+    threshold: int,
+    /,
+) -> frozenset[str]:
+    """Qualify only Scopes with at least ``threshold`` unprocessed Journal entries.
+
+    The persisted Journal head counts every distinct Source identity, including
+    lineage-only entries and receipt trust upgrades that already occupied a
+    position. The binding's own success cursor is the lower bound, so replayed
+    or duplicate captures never add to the outstanding count.
+    """
+
+    if not scope_ids or threshold < 1:
+        return frozenset()
+    heads = SOURCE_JOURNAL_HEADS_TABLE
+    rows = (
+        await connection.execute(
+            select(heads.c.scope_id, heads.c.position).where(heads.c.scope_id.in_(tuple(scope_ids)))
+        )
+    ).all()
+    positions = {str(scope): int(position) for scope, position in rows}
+    cursors = await SourceCursorRepository().load_many(connection, tuple(scope_ids), binding_name)
+    return frozenset(
+        scope
+        for scope in scope_ids
+        if positions.get(scope, 0) - (0 if scope not in cursors else cursors[scope].cursor.sequence) >= threshold
+    )
+
+
 class SourceProcessingPendingProvider:
     """Inspect journal metadata, never Source bodies, prompts, or models."""
 
